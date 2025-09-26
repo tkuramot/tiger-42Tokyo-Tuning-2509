@@ -1,0 +1,11 @@
+FROM 42tokyo2508.azurecr.io/backend:base AS build
+
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN go build -a -o /app/server ./cmd
+
+EXPOSE 8080
+ENTRYPOINT ["/app/server"]

@@ -1,0 +1,49 @@
+{
+    "[go]": {
+        "editor.defaultFormatter": "golang.go",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true    },
+    "[javascriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.formatOnPaste": true
+    },
+    "github.copilot.chat.commitMessageGeneration.instructions": [
+    {
+      "text": "必ず日本語で記述してください"
+    },
+    {
+      "text": "コミットメッセージは、以下の形式で記述してください：\n\n<type>(<scope>): <issue number> <subject>\n\n<body>"
+    },
+    {
+      "text": "typeは、feat, fix, docs, style, refactor, perf, test, choreなどを使用してください。"
+    },
+    {
+      "text": "scopeは、変更が関連するファイルや機能の範囲を示してください。"
+    },
+    {
+      "text": "issue numberは、ブランチ名に含まれる番号を使用してください。"
+    },
+    {
+      "text": "subjectは、変更内容を簡潔に記述してください。"
+    },
+    {
+      "text": "bodyはファイルごとの詳細な変更内容を記述してください"
+    }
+  ]
+}

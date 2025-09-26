@@ -1,0 +1,26 @@
+services:
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+      target: worker
+    container_name: benchmark-worker
+    env_file: .env
+    environment:
+      TZ: Asia/Tokyo
+      AZURE_QUEUE_NAME: "42tokyo-loadtest-requests"
+      TLS_INSECURE_SKIP_VERIFY: "1"
+      WORKER_AUTH_TOKEN: "ImHQeoOIum09eD8EwD5RzSkNkHD+K1v+Oxw1kUFCSfG"
+      # 中間サーバのベースURL（例：https://<中間サーバFQDN>）
+    hostname: benchmarker
+    volumes:
+      - ./worker/scenarios:/app/scenarios
+      - ./logs:/app/logs
+      - ./scores:/app/scores
+    restart: always
+    networks:
+      - benchmarker-network
+
+networks:
+  benchmarker-network:
+    driver: bridge

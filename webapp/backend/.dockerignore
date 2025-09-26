@@ -1,0 +1,11 @@
+bin
+dist
+vendor
+*.test
+.git
+.gitignore
+.vscode
+.DS_Store
+coverage
+server
+*Dockerfile*

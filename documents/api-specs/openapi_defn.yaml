@@ -1,0 +1,347 @@
+openapi: 3.0.0
+info:
+  title: 倉庫管理 API
+  version: 1.0.0
+  description: 商品一覧・注文・ロボット配送・認証を提供するAPI
+paths:
+  /api/login:
+    post:
+      summary: ログイン
+      description: ユーザー認証を行い、セッションIDをCookieにセットする
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: ログイン成功
+          headers:
+            Set-Cookie:
+              description: セッションID
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Login successful
+  # TODO いらない？
+  # /api/logout:
+  #   post:
+  #     summary: ログアウト
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             $ref: '#/components/schemas/LogoutRequest'
+  #     responses:
+  #       '200':
+  #         description: ログアウト成功
+  # /api/verify:
+  #   get:
+  #     summary: 認証情報確認
+  #     security:
+  #       - Bearer: []
+  #     responses:
+  #       '200':
+  #         description: 認証情報有効
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#/components/schemas/LoginResponse'
+  # TODO レスポンスにuser_idある？
+  /api/v1/products:
+    post:
+      summary: 商品一覧取得
+      description: 商品一覧をページング・ソート条件付きで取得する
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductListRequest'
+      responses:
+        '200':
+          description: 商品一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  total:
+                    type: integer
+  /api/v1/image:
+    get:
+      summary: 画像ファイルを取得
+      description: クエリパラメータで指定された画像ファイルを返します。
+      parameters:
+        - in: query
+          name: path
+          schema:
+            type: string
+          required: true
+          description: 画像ファイルのパス
+      responses:
+        '200':
+          description: 画像ファイル本体
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+  /api/v1/product/post:
+    post:
+      summary: 注文作成
+      description: 商品の注文を作成する
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: 注文作成成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Orders created successfully
+                  order_ids:
+                    type: array
+                    items:
+                      type: integer
+  /api/v1/orders:
+    post:
+      summary: 注文履歴取得
+      description: 注文履歴をページング・ソート条件付きで取得する
+      security:
+        - Bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderListRequest'
+      responses:
+        '200':
+          description: 注文履歴一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  total:
+                    type: integer
+  /api/robot/orders/status:
+    post:
+      summary: 注文ステータスの更新
+      description: 配送完了時に注文のステータスを更新する
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOrderStatusRequest'
+      responses:
+        '200':
+          description: ステータス更新成功
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Order status updated
+  /api/robot/delivery-plan:
+    get:
+      summary: 配送計画の取得
+      description: 指定したcapacityでロボットの配送計画を返す
+      parameters:
+        - in: query
+          name: capacity
+          schema:
+            type: integer
+          required: true
+          description: ロボットの最大積載量
+      responses:
+        '200':
+          description: 配送計画（DeliveryPlan）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryPlan'
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        product_id:
+          type: integer
+        name:
+          type: string
+        value:
+          type: integer
+        weight:
+          type: integer
+        image:
+          type: string
+        description:
+          type: string
+      required: [id, name, value, weight, image, description]
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+        product_id:
+          type: integer
+        user_id:
+          type: integer
+        status:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required: [id, product_id, user_id, status, created_at]
+    DeliveryPlan:
+      type: object
+      properties:
+        RobotID:
+          type: string
+        TotalWeight:
+          type: integer
+        TotalValue:
+          type: integer
+        Orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+    LoginRequest:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required: [username, password]
+    LogoutRequest:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+    OrderRequest:
+      type: object
+      properties:
+        product_id:
+          type: integer
+        user_id:
+          type: integer
+        quantity:
+          type: integer
+      required: [product_id, user_id, quantity]
+    OrderListRequest:
+      type: object
+      properties:
+        search:
+          type: string
+          description: 検索ワード
+        type:
+          type: string
+          description: 検索タイプ
+          enum: [partial, prefix]
+        page:
+          type: integer
+          description: ページ番号（省略時は1）
+        page_size:
+          type: integer
+          description: 1ページあたりの件数（省略時は20）
+        sort_field:
+          type: string
+          description: ソート対象のフィールド
+          enum: [order_id, product_id, status, created_at]
+        sort_order:
+          type: string
+          description: ソート順
+          enum: [asc, desc]
+    UpdateStatusRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+        status:
+          type: string
+      required: [order_id, status]
+    ProductListRequest:
+      type: object
+      properties:
+        search:
+          type: string
+          description: 検索ワード
+        type:
+          type: string
+          description: 検索タイプ
+          enum: [partial, exact]
+        page:
+          type: integer
+          description: ページ番号（省略時は1）
+        page_size:
+          type: integer
+          description: 1ページあたりの件数（省略時は20）
+        sort_field:
+          type: string
+          description: ソート対象のフィールド
+          enum: [product_id, name, value, weight]
+        sort_order:
+          type: string
+          description: ソート順
+          enum: [asc, desc]
+    RequestItem:
+      type: object
+      properties:
+        product_id:
+          type: integer
+        quantity:
+          type: integer
+    CreateOrderRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestItem'
+      required:
+        - items
+    UpdateOrderStatusRequest:
+      type: object
+      properties:
+        order_id:
+          type: integer
+          description: 注文ID
+        new_status:
+          type: string
+          description: 新しい注文ステータス
+          enum: [shipping, delivering, complete]
+      required:
+        - order_id
+        - new_status

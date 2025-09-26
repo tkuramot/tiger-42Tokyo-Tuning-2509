@@ -1,0 +1,6 @@
+.env
+42Tokyo-tuning-2508.zip
+.DS_Store
+*.zip
+sample/*
+deploy_*.sh
