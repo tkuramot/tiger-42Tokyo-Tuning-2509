@@ -5,3 +5,4 @@ local_csv
 local_data
 local_csv
 data
+*.sql
