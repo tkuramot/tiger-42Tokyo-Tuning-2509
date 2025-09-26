@@ -88,6 +88,7 @@ services:
       - ./mysql/conf.d:/etc/mysql/conf.d
       - ./mysql/migration:/etc/mysql/migration
       - ./mysql/data:/var/lib/mysql
+      - /var/log/mysql/mysql-slow.log:/var/log/mysql/mysql-slow.log
     networks:
       - webapp-network
     healthcheck:
@@ -119,6 +120,7 @@ services:
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
       - /da/tls:/da/tls:ro
+      - /var/log/nginx/access.log:/var/log/nginx/access.log
     networks:
       - webapp-network
     depends_on:
