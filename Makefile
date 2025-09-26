@@ -1,5 +1,10 @@
 .PHONY: up down
 
+run:
+	sudo chmod +rx /var/log/mysql/
+	sudo chmod +rx /var/log/nginx/
+	bash run.sh
+
 up:
 	cd webapp && docker compose -f docker-compose.local.yml up -d
 
