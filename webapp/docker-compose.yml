@@ -121,8 +121,6 @@ services:
       - /da/tls:/da/tls:ro
     networks:
       - webapp-network
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       frontend:
         condition: service_healthy
