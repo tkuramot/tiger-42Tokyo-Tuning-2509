@@ -17,6 +17,7 @@ services:
       # OTEL_TRACES_SAMPLER: "always_off"
     ports:
       - "8080:8080"
+      - "19001:19001" # pprotein
     working_dir: /usr/src/backend
     volumes:
       - ./images:/app/images:ro
