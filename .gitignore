@@ -5,3 +5,5 @@
 sample/*
 deploy_*.sh
 ftt2508-app-tiger_key.pem
+main
+webapp/mysql/init/restoreSQL
