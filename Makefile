@@ -1,6 +1,8 @@
 .PHONY: up down
 
 run:
+	sudo truncate -s 0 /var/log/mysql/mysql-slow.log
+	sudo truncate -s 0 /var/log/nginx/access.log
 	sudo chmod +rx /var/log/mysql/
 	sudo chmod +rx /var/log/nginx/
 	bash run.sh
