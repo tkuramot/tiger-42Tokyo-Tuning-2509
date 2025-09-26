@@ -8,6 +8,7 @@ import (
 	"backend/internal/service"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 	"os"
 
 	"github.com/go-chi/chi/v5"
@@ -59,6 +60,9 @@ func NewServer() (*Server, *sqlx.DB, error) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
 	})
+
+	// Add pprof endpoints for profiling
+	r.Mount("/debug/pprof", http.DefaultServeMux)
 
 	s := &Server{
 		Router: r,
