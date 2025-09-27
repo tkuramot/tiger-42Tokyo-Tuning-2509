@@ -32,6 +32,36 @@ func (r *OrderRepository) Create(ctx context.Context, order *model.Order) (strin
 	return fmt.Sprintf("%d", id), nil
 }
 
+func (r *OrderRepository) BulkCreate(ctx context.Context, orders []model.Order) ([]string, error) {
+	if len(orders) == 0 {
+		return []string{}, nil
+	}
+	valueStrings := make([]string, 0, len(orders))
+	valueArgs := make([]any, 0, len(orders)*2)
+	for _, order := range orders {
+		valueStrings = append(valueStrings, "(?, ?, 'shipping', NOW())")
+		valueArgs = append(valueArgs, order.UserID, order.ProductID)
+	}
+	query := fmt.Sprintf("INSERT INTO orders (user_id, product_id, shipped_status, created_at) VALUES %s", strings.Join(valueStrings, ","))
+	result, err := r.db.ExecContext(ctx, query, valueArgs...)
+	if err != nil {
+		return nil, err
+	}
+	firstID, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	orderIDs := make([]string, rowsAffected)
+	for i := range rowsAffected {
+		orderIDs[i] = fmt.Sprintf("%d", firstID+int64(i))
+	}
+	return orderIDs, nil
+}
+
 // 複数の注文IDのステータスを一括で更新
 // 主に配送ロボットが注文を引き受けた際に一括更新をするために使用
 func (r *OrderRepository) UpdateStatuses(ctx context.Context, orderIDs []int64, newStatus string) error {
@@ -86,7 +116,7 @@ func (r *OrderRepository) GetShippingOrdersOptimized(ctx context.Context, maxWei
 // 注文履歴一覧を取得
 func (r *OrderRepository) ListOrders(ctx context.Context, userID int, req model.ListRequest) ([]model.Order, int, error) {
 	var whereConditions []string
-	var args []interface{}
+	var args []any
 
 	whereConditions = append(whereConditions, "o.user_id = ?")
 	args = append(args, userID)
