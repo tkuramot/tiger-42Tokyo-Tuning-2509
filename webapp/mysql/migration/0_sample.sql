@@ -6,4 +6,6 @@ ALTER TABLE `orders` ADD INDEX `idx_shipped_product` (`shipped_status`, `product
 ALTER TABLE `products` ADD INDEX `idx_name_product_id` (`name`, `product_id`);
 ALTER TABLE `products` ADD INDEX `idx_weight_value` (`weight`, `value` DESC);
 ALTER TABLE `products` ADD INDEX `idx_weight_product_id` (`weight`, `product_id`);
+ALTER TABLE `products`
+  ADD FULLTEXT INDEX `idx_products_search` (`name`, `description`);
 ALTER TABLE `users` ADD INDEX `idx_user_name` (`user_name`);
