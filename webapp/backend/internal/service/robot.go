@@ -58,9 +58,7 @@ func (s *RobotService) UpdateOrderStatus(ctx context.Context, orderID int64, new
 
 func selectOrdersForDelivery(_ context.Context, orders []model.Order, robotID string, robotCapacity int) (model.DeliveryPlan, error) {
 	n := len(orders)
-	log.Printf("selectOrdersForDelivery: robotID=%s, robotCapacity=%d, orders count=%d", robotID, robotCapacity, n)
 	if n == 0 {
-		log.Printf("No orders available for delivery")
 		return model.DeliveryPlan{
 			RobotID:     robotID,
 			TotalWeight: 0,
@@ -106,7 +104,6 @@ func selectOrdersForDelivery(_ context.Context, orders []model.Order, robotID st
 		totalWeight += o.Weight
 	}
 
-	log.Printf("Selected %d orders, totalWeight=%d, totalValue=%d", len(bestSet), totalWeight, bestValue)
 	return model.DeliveryPlan{
 		RobotID:     robotID,
 		TotalWeight: totalWeight,
