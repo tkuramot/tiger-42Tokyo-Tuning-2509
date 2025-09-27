@@ -99,14 +99,17 @@ func (r *OrderRepository) GetShippingOrders(ctx context.Context) ([]model.Order,
 func (r *OrderRepository) GetShippingOrdersOptimized(ctx context.Context, maxWeight int, limit int) ([]model.Order, error) {
 	var orders []model.Order
 	query := `
-        SELECT
-            o.order_id,
-            p.weight,
-            p.value
-        FROM products p
+        SELECT o.order_id, p.weight, p.value
+        FROM (
+            SELECT product_id, weight, value
+            FROM products
+            WHERE weight <= ?
+            ORDER BY value DESC
+            LIMIT 1000
+        ) p
         JOIN orders o ON p.product_id = o.product_id
-        WHERE p.weight <= ? AND o.shipped_status = 'shipping'
-        ORDER BY p.value DESC, o.created_at ASC
+        WHERE o.shipped_status = 'shipping'
+        ORDER BY p.value DESC, o.created_at
         LIMIT ?
     `
 	err := r.db.SelectContext(ctx, &orders, query, maxWeight, limit)
