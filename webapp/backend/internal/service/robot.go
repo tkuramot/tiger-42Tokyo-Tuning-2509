@@ -57,57 +57,43 @@ func (s *RobotService) UpdateOrderStatus(ctx context.Context, orderID int64, new
 
 func selectOrdersForDelivery(ctx context.Context, orders []model.Order, robotID string, robotCapacity int) (model.DeliveryPlan, error) {
 	n := len(orders)
-	if n == 0 {
-		return model.DeliveryPlan{
-			RobotID:     robotID,
-			TotalWeight: 0,
-			TotalValue:  0,
-			Orders:      []model.Order{},
-		}, nil
-	}
-
-	dp := make([][]int, n+1)
-	for i := range dp {
-		dp[i] = make([]int, robotCapacity+1)
-	}
-
-	checkEvery := 16384
-	steps := 0
-
-	for i := 1; i <= n; i++ {
-		order := orders[i-1]
-		for w := 0; w <= robotCapacity; w++ {
-			steps++
-			if checkEvery > 0 && steps%checkEvery == 0 {
-				select {
-				case <-ctx.Done():
-					return model.DeliveryPlan{}, ctx.Err()
-				default:
-				}
-			}
-
-			dp[i][w] = dp[i-1][w]
-			if order.Weight <= w {
-				if dp[i-1][w-order.Weight]+order.Value > dp[i][w] {
-					dp[i][w] = dp[i-1][w-order.Weight] + order.Value
-				}
-			}
-		}
-	}
-
-	bestValue := dp[n][robotCapacity]
+	bestValue := 0
 	var bestSet []model.Order
-	w := robotCapacity
-	for i := n; i > 0; i-- {
-		if dp[i][w] != dp[i-1][w] {
-			order := orders[i-1]
-			bestSet = append(bestSet, order)
-			w -= order.Weight
+	steps := 0
+	checkEvery := 16384
+
+	var dfs func(i, curWeight, curValue int, curSet []model.Order) bool
+	dfs = func(i, curWeight, curValue int, curSet []model.Order) bool {
+		if curWeight > robotCapacity {
+			return false
 		}
+		steps++
+		if checkEvery > 0 && steps%checkEvery == 0 {
+			select {
+			case <-ctx.Done():
+				return true
+			default:
+			}
+		}
+		if i == n {
+			if curValue > bestValue {
+				bestValue = curValue
+				bestSet = append([]model.Order{}, curSet...)
+			}
+			return false
+		}
+
+		if dfs(i+1, curWeight, curValue, curSet) {
+			return true
+		}
+
+		order := orders[i]
+		return dfs(i+1, curWeight+order.Weight, curValue+order.Value, append(curSet, order))
 	}
 
-	for i, j := 0, len(bestSet)-1; i < j; i, j = i+1, j-1 {
-		bestSet[i], bestSet[j] = bestSet[j], bestSet[i]
+	canceled := dfs(0, 0, 0, nil)
+	if canceled {
+		return model.DeliveryPlan{}, ctx.Err()
 	}
 
 	var totalWeight int
