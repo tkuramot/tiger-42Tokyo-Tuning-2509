@@ -22,3 +22,4 @@ ALTER TABLE `products` ADD INDEX `idx_value_product_id` (`value`, `product_id`);
 ALTER TABLE `products` ADD INDEX `idx_weight_desc_product_id` (`weight` DESC, `product_id`);
 ALTER TABLE `products` ADD INDEX `idx_value_desc_product_id` (`value` DESC, `product_id`);
 ALTER TABLE `orders` ADD INDEX `idx_shipped_weight_value_created` (`shipped_status`, `product_id`);
+ALTER TABLE `orders` ADD INDEX `idx_shipped_created` (`shipped_status`, `created_at`);
