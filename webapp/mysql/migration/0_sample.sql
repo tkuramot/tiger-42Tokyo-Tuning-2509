@@ -10,3 +10,5 @@ ALTER TABLE `products` ADD INDEX `idx_weight_value` (`weight`, `value` DESC);
 ALTER TABLE `products` ADD FULLTEXT INDEX `idx_name_desc_fulltext` (`name`, `description`);
 
 ALTER TABLE `user_sessions` ADD INDEX `idx_session_expires` (`session_uuid`, `expires_at`, `user_id`);
+ALTER TABLE `orders` ADD INDEX `idx_user_product` (`user_id`, `product_id`);
+ALTER TABLE `products` ADD INDEX `idx_name_prefix` (`name`(50));
