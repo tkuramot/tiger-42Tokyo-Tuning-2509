@@ -12,3 +12,7 @@ ALTER TABLE `products` ADD FULLTEXT INDEX `idx_name_desc_fulltext` (`name`, `des
 ALTER TABLE `user_sessions` ADD INDEX `idx_session_expires` (`session_uuid`, `expires_at`, `user_id`);
 ALTER TABLE `orders` ADD INDEX `idx_user_product` (`user_id`, `product_id`);
 ALTER TABLE `products` ADD INDEX `idx_name_prefix` (`name`(50));
+
+ALTER TABLE `orders` ADD INDEX `idx_user_created` (`user_id`, `created_at`, `product_id`);
+ALTER TABLE `orders` ADD INDEX `idx_user_shipped` (`user_id`, `shipped_status`, `product_id`);
+ALTER TABLE `orders` ADD INDEX `idx_user_arrived` (`user_id`, `arrived_at`, `product_id`);
