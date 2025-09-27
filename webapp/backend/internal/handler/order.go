@@ -4,9 +4,10 @@ import (
 	"backend/internal/middleware"
 	"backend/internal/model"
 	"backend/internal/service"
-	"encoding/json"
 	"log"
 	"net/http"
+
+	"github.com/goccy/go-json"
 )
 
 type OrderHandler struct {
