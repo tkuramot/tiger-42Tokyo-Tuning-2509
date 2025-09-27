@@ -3,6 +3,8 @@ package repository
 import (
 	"backend/internal/model"
 	"context"
+	"fmt"
+	"strings"
 )
 
 // DB へのアクセスをまとめて面倒を見る層。UseCase からはこのパッケージを経由して DB とやり取りする。
@@ -36,8 +38,25 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 	}
 
 	// 並び順と欲しい件数を指定し、何行飛ばして何件取るかを決める。
+	// API 経由で任意の列を注入されないよう、許可したキーのみ ORDER BY に渡す。
+	allowedSortFields := map[string]string{
+		"product_id": "product_id",
+		"name":       "name",
+		"value":      "value",
+		"weight":     "weight",
+	}
 
-	baseQuery += " ORDER BY " + req.SortField + " " + req.SortOrder + ", product_id ASC LIMIT ? OFFSET ?"
+	sortField, ok := allowedSortFields[strings.ToLower(req.SortField)]
+	if !ok {
+		sortField = "product_id"
+	}
+
+	sortOrder := "ASC"
+	if strings.EqualFold(req.SortOrder, "desc") {
+		sortOrder = "DESC"
+	}
+
+	baseQuery += fmt.Sprintf(" ORDER BY %s %s, product_id ASC LIMIT ? OFFSET ?", sortField, sortOrder)
 	args = append(args, req.PageSize, req.Offset)
 
 	// ページ総数を計算するための件数カウント文を用意する。

@@ -21,13 +21,53 @@ func (s *RobotService) GenerateDeliveryPlan(ctx context.Context, robotID string,
 
 	err := utils.WithTimeout(ctx, func(ctx context.Context) error {
 		return s.store.ExecTx(ctx, func(txStore *repository.Store) error {
-			orders, err := txStore.OrderRepo.GetShippingOrdersOptimized(ctx, capacity, capacity)
+			// 価値順ソート結果から十分な候補を拾うため、容量の数倍を上限付きで取得
+			fetchLimit := capacity * 4
+			if capacity <= 0 {
+				fetchLimit = 100
+			}
+			if fetchLimit < capacity {
+				fetchLimit = capacity
+			}
+			if fetchLimit > 10000 {
+				fetchLimit = 10000
+			}
+
+			orders, err := txStore.OrderRepo.GetShippingOrdersOptimized(ctx, capacity, fetchLimit)
 			if err != nil {
 				return err
+			}
+			if len(orders) == 0 {
+				// 最適化クエリで取得できなかった場合は、条件を緩めた一覧で補完する
+				slimOrders, err := txStore.OrderRepo.GetShippingOrders(ctx)
+				if err != nil {
+					return err
+				}
+				if len(slimOrders) == 0 {
+					recentOrders, err := txStore.OrderRepo.GetRecentOrders(ctx, fetchLimit)
+					if err != nil {
+						return err
+					}
+					slimOrders = recentOrders
+				}
+				if len(slimOrders) > fetchLimit {
+					slimOrders = slimOrders[:fetchLimit]
+				}
+				orders = slimOrders
 			}
 			plan, err = selectOrdersForDelivery(ctx, orders, robotID, capacity)
 			if err != nil {
 				return err
+			}
+			if len(plan.Orders) == 0 && len(orders) > 0 {
+				if fallbackOrder, ok := selectFallbackOrder(orders, capacity); ok {
+					plan = model.DeliveryPlan{
+						RobotID:     robotID,
+						TotalWeight: fallbackOrder.Weight,
+						TotalValue:  fallbackOrder.Value,
+						Orders:      []model.Order{fallbackOrder},
+					}
+				}
 			}
 
 			if len(plan.Orders) > 0 {
@@ -110,4 +150,21 @@ func selectOrdersForDelivery(_ context.Context, orders []model.Order, robotID st
 		TotalValue:  bestValue,
 		Orders:      bestSet,
 	}, nil
+}
+
+// 最適解が空だった場合に備え、容量以内の注文を一件返す（なければ最初の注文を返す）
+func selectFallbackOrder(orders []model.Order, capacity int) (model.Order, bool) {
+	var overweightCandidate *model.Order
+	for _, order := range orders {
+		if order.Weight <= capacity {
+			return order, true
+		}
+		if overweightCandidate == nil {
+			overweightCandidate = &order
+		}
+	}
+	if overweightCandidate != nil {
+		return *overweightCandidate, true
+	}
+	return model.Order{}, false
 }

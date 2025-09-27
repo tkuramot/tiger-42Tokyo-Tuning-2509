@@ -30,6 +30,11 @@ CREATE TABLE products (
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_0900_ai_ci;
 
+-- 商品一覧のソート／検索を高速化する補助インデックス
+CREATE INDEX idx_products_value ON products (value);
+CREATE INDEX idx_products_weight ON products (weight);
+CREATE FULLTEXT INDEX idx_products_name_description ON products (name, description);
+
 -- LOAD DATA INFILE '/docker-entrypoint-initdb.d/csv/products.csv'
 -- INTO TABLE products
 -- FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n'
@@ -47,6 +52,10 @@ CREATE TABLE orders (
     FOREIGN KEY (product_id) REFERENCES products(product_id) ON DELETE CASCADE
 );
 
+-- 履歴照会と配送候補抽出のためのインデックス
+CREATE INDEX idx_orders_user_created ON orders (user_id, created_at);
+CREATE INDEX idx_orders_status_created ON orders (shipped_status, created_at);
+
 -- LOAD DATA INFILE '/docker-entrypoint-initdb.d/csv/orders.csv'
 -- INTO TABLE orders
 -- FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n'
@@ -62,3 +71,6 @@ CREATE TABLE `user_sessions` (
   UNIQUE KEY `session_uuid` (`session_uuid`),
   FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
+
+-- 期限切れセッションの検索を支援
+CREATE INDEX idx_user_sessions_expires_at ON user_sessions (expires_at);

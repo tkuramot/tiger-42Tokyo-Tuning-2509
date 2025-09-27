@@ -19,30 +19,37 @@ func NewProductService(store *repository.Store) *ProductService {
 func (s *ProductService) CreateOrders(ctx context.Context, userID int, items []model.RequestItem) ([]string, error) {
 	var insertedOrderIDs []string
 
-	err := s.store.ExecTx(ctx, func(txStore *repository.Store) error {
+		err := s.store.ExecTx(ctx, func(txStore *repository.Store) error {
 		itemsToProcess := make(map[int]int)
 		for _, item := range items {
 			if item.Quantity > 0 {
-				itemsToProcess[item.ProductID] = item.Quantity
+				itemsToProcess[item.ProductID] += item.Quantity
 			}
 		}
 		if len(itemsToProcess) == 0 {
 			return nil
 		}
 
-		for pID, quantity := range itemsToProcess {
+		totalQuantity := 0 // 先に容量を見積もってスライス再確保を避ける
+		for _, quantity := range itemsToProcess {
+			totalQuantity += quantity
+		}
+
+		ordersToInsert := make([]model.Order, 0, totalQuantity)
+		for productID, quantity := range itemsToProcess {
 			for i := 0; i < quantity; i++ {
-				order := &model.Order{
+				ordersToInsert = append(ordersToInsert, model.Order{
 					UserID:    userID,
-					ProductID: pID,
-				}
-				orderID, err := txStore.OrderRepo.Create(ctx, order)
-				if err != nil {
-					return err
-				}
-				insertedOrderIDs = append(insertedOrderIDs, orderID)
+					ProductID: productID,
+				})
 			}
 		}
+
+		orderIDs, err := txStore.OrderRepo.CreateBulk(ctx, ordersToInsert)
+		if err != nil {
+			return err
+		}
+		insertedOrderIDs = append(insertedOrderIDs, orderIDs...)
 		return nil
 	})
 

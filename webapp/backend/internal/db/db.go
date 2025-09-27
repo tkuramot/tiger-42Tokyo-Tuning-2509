@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -37,9 +38,37 @@ func InitDBConnection() (*sqlx.DB, error) {
 	}
 	log.Println("Successfully connected to MySQL!")
 
-	dbConn.SetMaxOpenConns(25)
-	dbConn.SetMaxIdleConns(10)
-	dbConn.SetConnMaxLifetime(0)
+	// 高負荷時に柔軟に調整できるよう、接続プールは環境変数で上書き可能にする
+	maxOpen := getEnvInt("DB_MAX_OPEN_CONNS", 100)
+	maxIdle := getEnvInt("DB_MAX_IDLE_CONNS", 25)
+	connLifetime := getEnvDuration("DB_CONN_MAX_LIFETIME", 5*time.Minute)
+
+	dbConn.SetMaxOpenConns(maxOpen)
+	dbConn.SetMaxIdleConns(maxIdle)
+	dbConn.SetConnMaxLifetime(connLifetime)
 
 	return dbConn, nil
+}
+
+func getEnvInt(key string, fallback int) int {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	if parsed, err := strconv.Atoi(value); err == nil && parsed > 0 {
+		return parsed
+	}
+	return fallback
+}
+
+func getEnvDuration(key string, fallback time.Duration) time.Duration {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+	dur, err := time.ParseDuration(value)
+	if err != nil {
+		return fallback
+	}
+	return dur
 }
