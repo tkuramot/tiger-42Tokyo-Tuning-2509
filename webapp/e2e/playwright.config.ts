@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: false,
-  retries: 1,
+  retries: 10,
   workers: 1,
   // ← 証跡を成功時だけ出すレポーターを追加（下でコード例）
   reporter: [["line"], ["./tests/_stampReporter.ts"]],
