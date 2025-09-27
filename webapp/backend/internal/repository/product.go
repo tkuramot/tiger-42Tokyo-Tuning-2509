@@ -30,8 +30,9 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 
 	// キーワードが来たら名前と説明文にその文字が含まれる行だけに絞る。
 	if req.Search != "" {
-		baseQuery += " WHERE MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE)"
-		args = append(args, req.Search)
+		baseQuery += " WHERE (MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE) OR (name LIKE ? OR description LIKE ?))"
+		searchPattern := "%" + req.Search + "%"
+		args = append(args, req.Search, searchPattern, searchPattern)
 	}
 
 	// 並び順と欲しい件数を指定し、何行飛ばして何件取るかを決める。
@@ -45,8 +46,9 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 	countArgs := []interface{}{}
 	// 件数を数えるときも同じ絞り込み条件を使う。
 	if req.Search != "" {
-		countQuery += " WHERE MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE)"
-		countArgs = append(countArgs, req.Search)
+		countQuery += " WHERE (MATCH(name, description) AGAINST (? IN NATURAL LANGUAGE MODE) OR (name LIKE ? OR description LIKE ?))"
+		searchPattern := "%" + req.Search + "%"
+		countArgs = append(countArgs, req.Search, searchPattern, searchPattern)
 	}
 
 	// クエリを実行して商品一覧を受け取る。
