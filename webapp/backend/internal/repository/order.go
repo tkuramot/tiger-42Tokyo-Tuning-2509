@@ -63,6 +63,26 @@ func (r *OrderRepository) GetShippingOrders(ctx context.Context) ([]model.Order,
 	return orders, err
 }
 
+// 配送中(shipped_status:shipping)の注文一覧を効率的に取得
+// maxWeight: ロボットの積載容量
+// limit: 取得する最大件数
+func (r *OrderRepository) GetShippingOrdersOptimized(ctx context.Context, maxWeight int, limit int) ([]model.Order, error) {
+	var orders []model.Order
+	query := `
+        SELECT
+            o.order_id,
+            p.weight,
+            p.value
+        FROM orders o
+        JOIN products p ON o.product_id = p.product_id
+        WHERE o.shipped_status = 'shipping' AND p.weight <= ?
+        ORDER BY p.value DESC, o.created_at ASC
+        LIMIT ?
+    `
+	err := r.db.SelectContext(ctx, &orders, query, maxWeight, limit)
+	return orders, err
+}
+
 // 注文履歴一覧を取得
 func (r *OrderRepository) ListOrders(ctx context.Context, userID int, req model.ListRequest) ([]model.Order, int, error) {
 	var whereConditions []string
