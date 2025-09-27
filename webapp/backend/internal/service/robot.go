@@ -5,9 +5,7 @@ import (
 	"backend/internal/repository"
 	"backend/internal/service/utils"
 	"context"
-	"fmt"
 	"log"
-	"reflect"
 )
 
 type RobotService struct {
@@ -27,12 +25,7 @@ func (s *RobotService) GenerateDeliveryPlan(ctx context.Context, robotID string,
 			if err != nil {
 				return err
 			}
-			plan, _ = selectOrdersForDelivery(ctx, orders, robotID, capacity)
-			planV2, err := selectOrdersForDeliveryV2(ctx, orders, robotID, capacity)
-			if !reflect.DeepEqual(plan, planV2) {
-				log.Printf("Plan mismatch detected for robotID=%s\nV1: %+v\nV2: %+v\norders: %+v\n", robotID, plan, planV2, orders)
-				return fmt.Errorf("plan verification failed: V1 and V2 produced different results")
-			}
+			plan, err = selectOrdersForDelivery(ctx, orders, robotID, capacity)
 			if err != nil {
 				return err
 			}
@@ -63,63 +56,11 @@ func (s *RobotService) UpdateOrderStatus(ctx context.Context, orderID int64, new
 	})
 }
 
-func selectOrdersForDelivery(ctx context.Context, orders []model.Order, robotID string, robotCapacity int) (model.DeliveryPlan, error) {
+func selectOrdersForDelivery(_ context.Context, orders []model.Order, robotID string, robotCapacity int) (model.DeliveryPlan, error) {
 	n := len(orders)
-	bestValue := 0
-	var bestSet []model.Order
-	steps := 0
-	checkEvery := 16384
-
-	var dfs func(i, curWeight, curValue int, curSet []model.Order) bool
-	dfs = func(i, curWeight, curValue int, curSet []model.Order) bool {
-		if curWeight > robotCapacity {
-			return false
-		}
-		steps++
-		if checkEvery > 0 && steps%checkEvery == 0 {
-			select {
-			case <-ctx.Done():
-				return true
-			default:
-			}
-		}
-		if i == n {
-			if curValue > bestValue {
-				bestValue = curValue
-				bestSet = append([]model.Order{}, curSet...)
-			}
-			return false
-		}
-
-		if dfs(i+1, curWeight, curValue, curSet) {
-			return true
-		}
-
-		order := orders[i]
-		return dfs(i+1, curWeight+order.Weight, curValue+order.Value, append(curSet, order))
-	}
-
-	canceled := dfs(0, 0, 0, nil)
-	if canceled {
-		return model.DeliveryPlan{}, ctx.Err()
-	}
-
-	var totalWeight int
-	for _, o := range bestSet {
-		totalWeight += o.Weight
-	}
-
-	return model.DeliveryPlan{
-		RobotID:     robotID,
-		TotalWeight: totalWeight,
-		TotalValue:  bestValue,
-		Orders:      bestSet,
-	}, nil
-}
-
-func selectOrdersForDeliveryV2(_ context.Context, orders []model.Order, robotID string, robotCapacity int) (model.DeliveryPlan, error) {
-	n := len(orders)
+	log.Printf("selectOrdersForDelivery: robotID=%s, robotCapacity=%d, orders count=%d", robotID, robotCapacity, n)
 	if n == 0 {
+		log.Printf("No orders available for delivery")
 		return model.DeliveryPlan{
 			RobotID:     robotID,
 			TotalWeight: 0,
@@ -149,8 +90,8 @@ func selectOrdersForDeliveryV2(_ context.Context, orders []model.Order, robotID 
 	var bestSet []model.Order
 	w := robotCapacity
 	for i := n; i > 0; i-- {
-		if dp[i][w] != dp[i-1][w] {
-			order := orders[i-1]
+		order := orders[i-1]
+		if w >= order.Weight && dp[i][w] == dp[i-1][w-order.Weight]+order.Value {
 			bestSet = append(bestSet, order)
 			w -= order.Weight
 		}
@@ -165,6 +106,7 @@ func selectOrdersForDeliveryV2(_ context.Context, orders []model.Order, robotID 
 		totalWeight += o.Weight
 	}
 
+	log.Printf("Selected %d orders, totalWeight=%d, totalValue=%d", len(bestSet), totalWeight, bestValue)
 	return model.DeliveryPlan{
 		RobotID:     robotID,
 		TotalWeight: totalWeight,
