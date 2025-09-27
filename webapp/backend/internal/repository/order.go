@@ -126,8 +126,8 @@ func (r *OrderRepository) ListOrders(ctx context.Context, userID int, req model.
 			whereConditions = append(whereConditions, "p.name LIKE ?")
 			args = append(args, req.Search+"%")
 		} else {
-			whereConditions = append(whereConditions, "p.name LIKE ?")
-			args = append(args, "%"+req.Search+"%")
+			whereConditions = append(whereConditions, "MATCH(p.name, p.description) AGAINST(? IN NATURAL LANGUAGE MODE)")
+			args = append(args, req.Search)
 		}
 	}
 
