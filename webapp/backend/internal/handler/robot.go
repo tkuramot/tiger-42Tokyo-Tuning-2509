@@ -3,10 +3,11 @@ package handler
 import (
 	"backend/internal/model"
 	"backend/internal/service"
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/goccy/go-json"
 )
 
 type RobotHandler struct {

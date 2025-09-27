@@ -1,13 +1,13 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"log"
 	"net/http"
 
 	"backend/internal/model"
 	"backend/internal/service"
+	"github.com/goccy/go-json"
 )
 
 type AuthHandler struct {
