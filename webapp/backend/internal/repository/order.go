@@ -103,9 +103,9 @@ func (r *OrderRepository) GetShippingOrdersOptimized(ctx context.Context, maxWei
             o.order_id,
             p.weight,
             p.value
-        FROM orders o
-        JOIN products p ON o.product_id = p.product_id
-        WHERE o.shipped_status = 'shipping' AND p.weight <= ?
+        FROM products p
+        JOIN orders o ON p.product_id = o.product_id
+        WHERE p.weight <= ? AND o.shipped_status = 'shipping'
         ORDER BY p.value DESC, o.created_at ASC
         LIMIT ?
     `
