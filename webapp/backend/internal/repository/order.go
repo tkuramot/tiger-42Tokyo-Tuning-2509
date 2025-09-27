@@ -88,6 +88,8 @@ func (r *OrderRepository) GetShippingOrders(ctx context.Context) ([]model.Order,
         FROM orders o
         JOIN products p ON o.product_id = p.product_id
         WHERE o.shipped_status = 'shipping'
+        ORDER BY o.created_at ASC
+        LIMIT 10000
     `
 	err := r.db.SelectContext(ctx, &orders, query)
 	return orders, err
