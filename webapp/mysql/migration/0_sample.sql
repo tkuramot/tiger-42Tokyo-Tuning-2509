@@ -17,6 +17,9 @@ ALTER TABLE `orders` ADD INDEX `idx_user_created` (`user_id`, `created_at`, `pro
 ALTER TABLE `orders` ADD INDEX `idx_user_shipped` (`user_id`, `shipped_status`, `product_id`);
 ALTER TABLE `orders` ADD INDEX `idx_user_arrived` (`user_id`, `arrived_at`, `product_id`);
 
+ALTER TABLE `products` ADD INDEX `idx_weight_value_pid` (`weight`, `value` DESC, `product_id`);
+ALTER TABLE `orders` ADD INDEX `idx_shipped_created_pid` (`shipped_status`, `created_at`, `product_id`);
+
 ALTER TABLE `products` ADD INDEX `idx_name_desc_product_id` (`name` DESC, `product_id`);
 ALTER TABLE `products` ADD INDEX `idx_value_product_id` (`value`, `product_id`);
 ALTER TABLE `products` ADD INDEX `idx_weight_desc_product_id` (`weight` DESC, `product_id`);
