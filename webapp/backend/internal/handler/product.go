@@ -4,13 +4,14 @@ import (
 	"backend/internal/middleware"
 	"backend/internal/model"
 	"backend/internal/service"
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/goccy/go-json"
 )
 
 type ProductHandler struct {
