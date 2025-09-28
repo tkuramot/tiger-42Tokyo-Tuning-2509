@@ -106,11 +106,12 @@ func (r *OrderRepository) UpdateStatuses(ctx context.Context, orderIDs []int64, 
 		}
 	}
 
-	query, args, err := sqlx.In("UPDATE orders SET shipped_status = ? WHERE order_id IN (?)", newStatus, orderIDs)
+	query, args, err := sqlx.In("UPDATE orders SET shipped_status = ? WHERE order_id IN (?)", orderIDs)
 	if err != nil {
 		return err
 	}
 	query = r.db.Rebind(query)
+	args = append([]any{newStatus}, args...)
 	_, err = r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return err
