@@ -7,6 +7,9 @@ run:
 	sudo chmod +rx /var/log/nginx/
 	bash run.sh
 
+db.sh:
+	docker exec -it tuning-mysql mysql -uroot -pmysql 42tokyo2508-db
+
 up:
 	cd webapp && docker compose -f docker-compose.local.yml up -d
 
