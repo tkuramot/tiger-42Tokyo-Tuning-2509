@@ -19,17 +19,16 @@ var (
 	productCountCacheMu    sync.Mutex
 )
 
-func getProductCount(ctx context.Context, db DBTX) (int, error) {
+func loadProductCount(ctx context.Context, db DBTX) (int, error) {
 	if productCountCacheReady.Load() {
 		return int(productCountCacheValue.Load()), nil
 	}
+	return refreshProductCount(ctx, db)
+}
 
+func refreshProductCount(ctx context.Context, db DBTX) (int, error) {
 	productCountCacheMu.Lock()
 	defer productCountCacheMu.Unlock()
-
-	if productCountCacheReady.Load() {
-		return int(productCountCacheValue.Load()), nil
-	}
 
 	var total int
 	if err := db.GetContext(ctx, &total, "SELECT COUNT(*) FROM products"); err != nil {
@@ -37,7 +36,6 @@ func getProductCount(ctx context.Context, db DBTX) (int, error) {
 	}
 	productCountCacheValue.Store(int64(total))
 	productCountCacheReady.Store(true)
-
 	return total, nil
 }
 
@@ -85,11 +83,15 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 
 	var total int
 	if req.Search == "" {
-		cachedTotal, err := getProductCount(ctx, r.db)
+		var err error
+		if req.Offset == 0 {
+			total, err = refreshProductCount(ctx, r.db)
+		} else {
+			total, err = loadProductCount(ctx, r.db)
+		}
 		if err != nil {
 			return nil, 0, err
 		}
-		total = cachedTotal
 	} else {
 		if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
 			return nil, 0, err
