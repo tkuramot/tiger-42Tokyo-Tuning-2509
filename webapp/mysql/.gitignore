@@ -7,4 +7,3 @@ local_csv
 data
 *.sql
 !1_shipping_order_cache.sql
-!2_ngram_fulltext_index.sql
