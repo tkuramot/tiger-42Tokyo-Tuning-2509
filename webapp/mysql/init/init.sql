@@ -30,6 +30,10 @@ CREATE TABLE products (
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_0900_ai_ci;
 
+CREATE FULLTEXT INDEX idx_name_desc_fulltext
+  ON products (name, description)
+  WITH PARSER ngram;
+
 -- LOAD DATA INFILE '/docker-entrypoint-initdb.d/csv/products.csv'
 -- INTO TABLE products
 -- FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n'
