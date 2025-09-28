@@ -21,7 +21,7 @@ func (s *RobotService) GenerateDeliveryPlan(ctx context.Context, robotID string,
 
 	err := utils.WithTimeout(ctx, func(ctx context.Context) error {
 		return s.store.ExecTx(ctx, func(txStore *repository.Store) error {
-			orders, err := txStore.OrderRepo.GetShippingOrdersOptimized(ctx, capacity, capacity)
+			orders, err := txStore.OrderRepo.GetShippingOrdersOptimized(ctx, capacity)
 			if err != nil {
 				return err
 			}
