@@ -29,6 +29,18 @@ func (r *OrderRepository) Create(ctx context.Context, order *model.Order) (strin
 	if err != nil {
 		return "", err
 	}
+
+	cacheQuery := `
+		INSERT INTO shipping_order_cache (order_id, weight, value)
+		SELECT ?, p.weight, p.value
+		FROM products p
+		WHERE p.product_id = ?
+	`
+	_, err = r.db.ExecContext(ctx, cacheQuery, id, order.ProductID)
+	if err != nil {
+		return "", err
+	}
+
 	return fmt.Sprintf("%d", id), nil
 }
 
@@ -59,6 +71,19 @@ func (r *OrderRepository) BulkCreate(ctx context.Context, orders []model.Order) 
 	for i := range rowsAffected {
 		orderIDs[i] = fmt.Sprintf("%d", firstID+int64(i))
 	}
+
+	cacheValueStrings := make([]string, 0, len(orders))
+	cacheValueArgs := make([]any, 0, len(orders)*2)
+	for i, order := range orders {
+		cacheValueStrings = append(cacheValueStrings, "((SELECT ? AS order_id, p.weight, p.value FROM products p WHERE p.product_id = ?))")
+		cacheValueArgs = append(cacheValueArgs, firstID+int64(i), order.ProductID)
+	}
+	cacheQuery := fmt.Sprintf("INSERT INTO shipping_order_cache (order_id, weight, value) %s", strings.Join(cacheValueStrings, " UNION ALL "))
+	_, err = r.db.ExecContext(ctx, cacheQuery, cacheValueArgs...)
+	if err != nil {
+		return nil, err
+	}
+
 	return orderIDs, nil
 }
 
@@ -68,13 +93,48 @@ func (r *OrderRepository) UpdateStatuses(ctx context.Context, orderIDs []int64, 
 	if len(orderIDs) == 0 {
 		return nil
 	}
+
+	if newStatus != "shipping" {
+		deleteQuery, deleteArgs, err := sqlx.In("DELETE FROM shipping_order_cache WHERE order_id IN (?)", orderIDs)
+		if err != nil {
+			return err
+		}
+		deleteQuery = r.db.Rebind(deleteQuery)
+		_, err = r.db.ExecContext(ctx, deleteQuery, deleteArgs...)
+		if err != nil {
+			return err
+		}
+	}
+
 	query, args, err := sqlx.In("UPDATE orders SET shipped_status = ? WHERE order_id IN (?)", newStatus, orderIDs)
 	if err != nil {
 		return err
 	}
 	query = r.db.Rebind(query)
 	_, err = r.db.ExecContext(ctx, query, args...)
-	return err
+	if err != nil {
+		return err
+	}
+
+	if newStatus == "shipping" {
+		insertQuery, insertArgs, err := sqlx.In(`
+			INSERT INTO shipping_order_cache (order_id, weight, value)
+			SELECT o.order_id, p.weight, p.value
+			FROM orders o
+			JOIN products p ON o.product_id = p.product_id
+			WHERE o.order_id IN (?)
+		`, orderIDs)
+		if err != nil {
+			return err
+		}
+		insertQuery = r.db.Rebind(insertQuery)
+		_, err = r.db.ExecContext(ctx, insertQuery, insertArgs...)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // 配送中(shipped_status:shipping)の注文一覧を取得
@@ -100,17 +160,12 @@ func (r *OrderRepository) GetShippingOrdersOptimized(ctx context.Context, maxWei
 	var orders []model.Order
 	query := `
         SELECT
-            o.order_id,
-            p.weight,
-            p.value
-        FROM (
-            SELECT product_id, weight, value
-            FROM products
-            WHERE weight <= ?
-        ) p
-        JOIN orders o ON p.product_id = o.product_id
-        WHERE o.shipped_status = 'shipping'
-        ORDER BY p.value DESC, o.created_at ASC
+            order_id,
+            weight,
+            value
+        FROM shipping_order_cache
+        WHERE weight <= ?
+        ORDER BY value DESC
         LIMIT ?
     `
 	err := r.db.SelectContext(ctx, &orders, query, maxWeight, limit)
