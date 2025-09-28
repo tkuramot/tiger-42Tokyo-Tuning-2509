@@ -96,23 +96,25 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 
 	var total int
 	if len(countArgs) == 0 {
-		cachedTotal, err := loadProductCount(ctx, r.db, countQuery)
+		var err error
+		if req.Offset == 0 {
+			total, err = refreshProductCount(ctx, r.db, countQuery)
+		} else {
+			total, err = loadProductCount(ctx, r.db, countQuery)
+			if err == nil && req.Offset+len(products) > total {
+				total, err = refreshProductCount(ctx, r.db, countQuery)
+			}
+		}
 		if err != nil {
 			return nil, 0, err
 		}
-		total = cachedTotal
 	}
 	if req.Search != "" {
 		if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
 			return nil, 0, err
 		}
-	} else {
-		if req.Offset+len(products) > total {
-			updatedTotal, err := refreshProductCount(ctx, r.db, countQuery)
-			if err != nil {
-				return nil, 0, err
-			}
-			total = updatedTotal
+		if req.Offset == 0 && !productCountCacheReady.Load() {
+			refreshProductCount(ctx, r.db, "SELECT COUNT(*) FROM products")
 		}
 	}
 
