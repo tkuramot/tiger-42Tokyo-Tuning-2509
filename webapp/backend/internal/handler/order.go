@@ -49,6 +49,8 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 		req.Type = "partial"
 	}
 
+	req.Offset = (req.Page - 1) * req.PageSize
+
 	orders, total, err := h.OrderSvc.FetchOrders(r.Context(), userID, req)
 	if err != nil {
 		log.Printf("Failed to fetch orders for user %d: %v", userID, err)
