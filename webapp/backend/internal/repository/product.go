@@ -4,11 +4,41 @@ import (
 	"backend/internal/model"
 	"context"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 // DB へのアクセスをまとめて面倒を見る層。UseCase からはこのパッケージを経由して DB とやり取りする。
 type ProductRepository struct {
 	db DBTX
+}
+
+var (
+	productCountCacheValue atomic.Int64
+	productCountCacheReady atomic.Bool
+	productCountCacheMu    sync.Mutex
+)
+
+func getProductCount(ctx context.Context, db DBTX) (int, error) {
+	if productCountCacheReady.Load() {
+		return int(productCountCacheValue.Load()), nil
+	}
+
+	productCountCacheMu.Lock()
+	defer productCountCacheMu.Unlock()
+
+	if productCountCacheReady.Load() {
+		return int(productCountCacheValue.Load()), nil
+	}
+
+	var total int
+	if err := db.GetContext(ctx, &total, "SELECT COUNT(*) FROM products"); err != nil {
+		return 0, err
+	}
+	productCountCacheValue.Store(int64(total))
+	productCountCacheReady.Store(true)
+
+	return total, nil
 }
 
 // NewProductRepository はリポジトリを初期化し、呼び出し側から渡された DB インターフェースを保持する。
@@ -54,8 +84,16 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 	}
 
 	var total int
-	if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
-		return nil, 0, err
+	if req.Search == "" {
+		cachedTotal, err := getProductCount(ctx, r.db)
+		if err != nil {
+			return nil, 0, err
+		}
+		total = cachedTotal
+	} else {
+		if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
+			return nil, 0, err
+		}
 	}
 
 	return products, total, nil
