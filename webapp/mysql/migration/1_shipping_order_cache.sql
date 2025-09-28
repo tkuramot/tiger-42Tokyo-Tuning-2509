@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS shipping_order_cache (
 DEFAULT CHARSET=utf8mb4
 COLLATE=utf8mb4_0900_ai_ci;
 
+ALTER TABLE `shipping_order_cache` ADD INDEX `idx_weight_value` (`weight`, `value` DESC);
+
 INSERT INTO shipping_order_cache (order_id, weight, value)
 SELECT o.order_id, p.weight, p.value
 FROM orders o
