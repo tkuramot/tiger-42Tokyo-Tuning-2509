@@ -3,7 +3,6 @@ package repository
 import (
 	"backend/internal/model"
 	"context"
-	"strings"
 )
 
 // DB へのアクセスをまとめて面倒を見る層。UseCase からはこのパッケージを経由して DB とやり取りする。
@@ -28,11 +27,7 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 
 	if req.Search != "" {
 		baseQuery += " WHERE MATCH(name, description) AGAINST(? IN BOOLEAN MODE)"
-		searchTerms := strings.Fields(req.Search)
-		for i, term := range searchTerms {
-			searchTerms[i] = term + "*"
-		}
-		args = append(args, strings.Join(searchTerms, " "))
+		args = append(args, req.Search)
 	}
 
 	baseQuery += " ORDER BY " + req.SortField + " " + req.SortOrder + ", product_id ASC LIMIT ? OFFSET ?"
@@ -42,11 +37,7 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 	countArgs := []interface{}{}
 	if req.Search != "" {
 		countQuery += " WHERE MATCH(name, description) AGAINST(? IN BOOLEAN MODE)"
-		searchTerms := strings.Fields(req.Search)
-		for i, term := range searchTerms {
-			searchTerms[i] = term + "*"
-		}
-		countArgs = append(countArgs, strings.Join(searchTerms, " "))
+		countArgs = append(countArgs, req.Search)
 	}
 
 	if err := r.db.SelectContext(ctx, &products, baseQuery, args...); err != nil {
