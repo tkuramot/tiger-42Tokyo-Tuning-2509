@@ -72,14 +72,14 @@ func (r *OrderRepository) BulkCreate(ctx context.Context, orders []model.Order) 
 		orderIDs[i] = fmt.Sprintf("%d", firstID+int64(i))
 	}
 
-	cacheValueStrings := make([]string, 0, len(orders))
-	cacheValueArgs := make([]any, 0, len(orders)*2)
-	for i, order := range orders {
-		cacheValueStrings = append(cacheValueStrings, "((SELECT ? AS order_id, p.weight, p.value FROM products p WHERE p.product_id = ?))")
-		cacheValueArgs = append(cacheValueArgs, firstID+int64(i), order.ProductID)
-	}
-	cacheQuery := fmt.Sprintf("INSERT INTO shipping_order_cache (order_id, weight, value) %s", strings.Join(cacheValueStrings, " UNION ALL "))
-	_, err = r.db.ExecContext(ctx, cacheQuery, cacheValueArgs...)
+	cacheQuery := `
+		INSERT INTO shipping_order_cache (order_id, weight, value)
+		SELECT o.order_id, p.weight, p.value
+		FROM orders o
+		JOIN products p ON o.product_id = p.product_id
+		WHERE o.order_id >= ? AND o.order_id < ?
+	`
+	_, err = r.db.ExecContext(ctx, cacheQuery, firstID, firstID+int64(len(orderIDs)))
 	if err != nil {
 		return nil, err
 	}
