@@ -17,6 +17,7 @@ var (
 	productCountCacheValue atomic.Int64
 	productCountCacheReady atomic.Bool
 	productCountCacheMu    sync.Mutex
+	productCountCacheDirty atomic.Bool
 )
 
 func loadProductCount(ctx context.Context, db DBTX, query string) (int, error) {
@@ -29,6 +30,9 @@ func refreshProductCount(ctx context.Context, db DBTX, query string) (int, error
 
 func fetchProductCount(ctx context.Context, db DBTX, query string, force bool) (int, error) {
 	if !force {
+		if productCountCacheDirty.Load() {
+			force = true
+		}
 		if ready := productCountCacheReady.Load(); ready {
 			return int(productCountCacheValue.Load()), nil
 		}
@@ -38,6 +42,9 @@ func fetchProductCount(ctx context.Context, db DBTX, query string, force bool) (
 	defer productCountCacheMu.Unlock()
 
 	if !force {
+		if productCountCacheDirty.Load() {
+			force = true
+		}
 		if ready := productCountCacheReady.Load(); ready {
 			return int(productCountCacheValue.Load()), nil
 		}
@@ -49,6 +56,7 @@ func fetchProductCount(ctx context.Context, db DBTX, query string, force bool) (
 	}
 	productCountCacheValue.Store(int64(total))
 	productCountCacheReady.Store(true)
+	productCountCacheDirty.Store(false)
 	return total, nil
 }
 
@@ -108,13 +116,16 @@ func (r *ProductRepository) ListProducts(ctx context.Context, userID int, req mo
 		if err != nil {
 			return nil, 0, err
 		}
-	}
-	if req.Search != "" {
+	} else {
 		if err := r.db.GetContext(ctx, &total, countQuery, countArgs...); err != nil {
 			return nil, 0, err
 		}
-		if req.Offset == 0 && !productCountCacheReady.Load() {
-			refreshProductCount(ctx, r.db, "SELECT COUNT(*) FROM products")
+		if req.Offset == 0 {
+			productCountCacheMu.Lock()
+			productCountCacheValue.Store(int64(total))
+			productCountCacheReady.Store(true)
+			productCountCacheDirty.Store(false)
+			productCountCacheMu.Unlock()
 		}
 	}
 
